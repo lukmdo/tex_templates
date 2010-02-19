@@ -1,0 +1,613 @@
+\documentclass[12pt,psfig,a4]{article}
+\usepackage{geometry}
+%\geometry{a4paper}
+\geometry{left=18mm,right=18mm,top=21mm,bottom=21mm}
+
+%\gemoetry{verbose,a4paper,tmargin=21mm,bmargin=21mm,lmargin=18mm,rmargin=18mm}
+\usepackage{graphics}
+\usepackage{setspace}
+\newcommand{\Lyx}{L\kern-.1667em\lower.25em\hbox{y}\kern-.125emX\spacefactor1000}
+\newcommand\bibname{References}
+\singlespacing
+\begin{document}
+\bibliographystyle{plain} 
+\pagestyle{plain} 
+\pagenumbering{arabic}
+%\rmfamily
+
+\title{Parallelization of DC-Analyzer}
+\author{
+%G. Anil Kumar , Gaurav Trivedi, Madhav P. Desai, H. Narayanan\\
+%Department of Electrical Engineering Department,\\   
+%Indian Institute of Technology, Bombay,\\
+%Mumbai, 400 076,\\
+%India
+}
+\date{31 May, 2002}
+\maketitle
+
+% Article starts here
+
+\begin{abstract} 
+
+Physical problems offer scope for macro level parallelization of solution by their essential structure. For parallelization of
+electrical network simulation, the most natural structure based method is that of {\it Multiport Decomposition}. In this paper
+this method is used for the simulation of electrical networks consisting of resistors, independent and controlled sources using 
+a distributed cluster of weakly coupled processors. 
+Results are presented for the cases where the number of processors
+are 1,2,4,8 and for circuit sizes upto 700,000 nodes and
+1.4 million edges. We use a cluster of Pentium IV processors linked 
+through a 10/100MBPS ethernet switch.
+
+
+
+\end{abstract} 
+
+{\bf Keywords:} Multiport Decomposition, Parallel processor, simulation.\\
+
+\section{Introduction}
+
+It is becoming increasingly necessary to solve very large circuits
+accurately. This is both because of higher chip densities and also
+because of
+the incorporation of high frequency effects.
+Usually such circuits are too large to be solved on a single
+processor and some form of distributed computing has to be resorted to.
+We have chosen the model of cluster computing in which all the processors are connected 
+through  weak media. 
+We used a 10/100 Mbps unmanaged Ethernet switch for interconnecting processors. 
+This level of resources is easy to obtain in almost any computational
+laboratory or software house. We have solved DC circuits of sizes
+upto $700,000$ nodes and $1.4$ million edges by our technique 
+using such resources in only a few minutes.
+%An in-house circuit simulator Titan that is parallelly processed  
+%with a speedup of 3.92  for the 4-processor model is reported in \cite{SIE}. The medium of interconnection in that case was switched Ethernet.
+\par
+
+The general approach used by us to parallel process a circuit simulator 
+is to decompose the circuit into $k$ `multiports'. These
+decomposed $k$ multiports are solved independently. 
+%The processors are allowed to share memory resources. 
+After obtaining the port behaviour 
+we use the connection constraints between multiports
+for computing the port voltages and currents.
+For best 
+results during parallel computing, communication among processors should be a minimum. It is necessary therefore that  decomposed
+blocks should have minimum interconnection between themselves.
+We present our method of solution in
+Section 2. 
+
+Every general purpose circuit simulator has a {\it DC-Analyzer} at its core. In any iteration of non-linear circuit analysis a circuit simulator solves a 
+circuit consisting only of elements: resistors (R),controlled sources (CS), voltage sources (V) and Current sources (J). Thus, parallelization can be done in two 
+ways. First, by parallelizing each iteration of the non-linear analysis and second, by parallelizing the {\it DC-Analyzer} itself. The first 
+approach is adopted by \cite{SIE}. We adopt the second approach \cite{GAK,NJB,GT} and show that parallelizing the {\it DC-Analyzer} may yield 
+significant speedup in overall circuit simulation. The algorithm used for parallel {\it DC-Analysis} is explained in Section 3. 
+Results are discussed in Section 4. 
+
+\section{Multiport Decomposition}
+
+A port conventionally means a pair of terminals in a network which can be used to connect it to another network in such a way 
+that the current entering through one terminal of the network is equal to the current coming out of 
+another terminal of the same network. Now, {\it Multiport} can be viewed as more than one port in a network 
+to make connections with external networks. For studying the behavior of a network on another network when both are
+connected, we use, for formal purposes, a device ({\it norator}) which permits every current voltage combination. When connected across
+a pair of external terminals of a network it automatically 
+ensures that the current leaving the network through one terminal equals the current entering the other since these currents must equal
+the current flowing through the norator. In further discussions an electrical 
+network could include some extra devices which are  norators. Norators are specified as ports. \par
+
+A electrical circuit is divided into $k$ parts by using {\it Multiport Decomposition} \cite{HN} in such a way that there is no 
+interaction between the $k$ parts. The decomposed parts may be large but the number of ports should be minimum. \par
+
+A network $N$, which is to be decomposed into two multiports, is given in figure \ref{multi}. $N_{A}$ and $N_{B}$ are the 
+subnetworks of $N$. Assume that the devices in both of the network are decoupled.
+It can be seen that the currents in $N_{B}$ can affect the currents in $N_{A}$ or vice-versa
+according to the KCE constraint at $n_{1},n_{2}$. Simultaneously voltages in $N_{A}(N_{B})$ can affect the
+voltages in $N_{B}(N_{A})$ because voltage $v_{1} = v_{n_{1}} - v_{n_{2}}$. Thus the constraint on
+all currents and voltages of $N$ remain the same if we replace the network by the decomposed network. Both 
+the original and decomposed networks are shown in figure \ref{multi}. In the figure \ref{multi} norators are 
+represented by dotted lines. The conditions $v_{P} = v_{P^{'}}, i_{P} = -i_{P^{'}}$, are imposed by the 
+{\it port connection diagram} which depicts the two norators in parallel. This can be written in the form 
+of matrices also, which is given below.\par 
+
+\hspace{1in}Let $[A_{rA}^{'} A_{rB}^{'}], [A_{rA} A_{rP}], [A_{rB} A_{rP^{'}}]$
+be the reduced incidence matrices of graphs $G, G_{AP}, G_{BP^{'}}$ respectively and $[B_{A}^{'}
+B_{B}^{'}], [B_{A} B_{P}], [B_{B} B_{P^{'}}]$ are the loop matrices (whose rows span the current space
+of graphs $G, G_{AP}, G_{BP^{'}}$ respectively).
+
+\begin{figure}[ht]
+{\centering \resizebox*{4in}{4in}{\includegraphics{fig6.pdf}} \par}
+\caption{Multiport Decomposition Technique}
+\label{multi}
+\end{figure}
+
+\begin{equation}
+\left[\begin{array}{ll}
+A_{rA} & A_{rP}\\
+\end{array}\right]
+\left[\begin{array}{l}
+i_{A} \\
+i_{P}\\
+\end{array}\right]
+= 0
+\end{equation}
+
+\begin{equation}
+\left[\begin{array}{ll}
+A_{rB} & A_{rP^{'}}\\
+\end{array}\right]
+\left[\begin{array}{l}
+i_{A} \\
+i_{P^{'}}\\
+\end{array}\right]
+= 0
+\end{equation}
+
+\begin{equation}
+\left[\begin{array}{ll}
+I & I\\
+\end{array}\right]
+\left[\begin{array}{l}
+i_{P} \\
+i_{P^{'}}\\
+\end{array}\right]
+= 0
+\end{equation}
+
+\begin{equation}
+\left[\begin{array}{ll}
+B_{B} & B_{P}\\
+\end{array}\right]
+\left[\begin{array}{l}
+v_{A} \\
+v_{P}\\
+\end{array}\right]
+= 0
+\end{equation}
+
+\begin{equation}
+\left[\begin{array}{ll}
+B_{B} & B_{P^{'}}\\
+\end{array}\right]
+\left[\begin{array}{l}
+v_{B} \\
+v_{P^{'}}\\
+\end{array}\right]
+= 0
+\end{equation}
+
+\begin{equation}
+\left[\begin{array}{ll}
+I & -I\\
+\end{array}\right]
+\left[\begin{array}{l}
+v_{P} \\
+v_{P^{'}}\\
+\end{array}\right]
+= 0
+\end{equation}
+
+A more general example of Multiport Decomposition is shown in figure \ref{multigen}.
+
+\begin{figure}[ht]
+{\centering \resizebox*{6in}{5.5in}{\includegraphics{Multidecomp.pdf}} \par}
+\caption{Multiport Decomposition Technique}
+\label{multigen}
+\end{figure}
+
+
+\section{Algorithm}
+
+The method used for circuit decomposition is {\it Multiport Decomposition}. The analysis is
+performed by {\it DC-Analyzer} \cite{SHBP} which uses the {\it Two-Graph Method} \cite{SHBP}. An elementary 
+partitioner was used to obtain the graph of the network into subgraphs of approximately equal size with very
+few common nodes. 
+%This was particularly easy since the graphs handled has a near planar grid like structure. 
+{\it PVM} \cite{PVM,PVMS} is used for communicating among processors. Assuming that the DC-Analyzer was available on
+each processor, the algorithm for parallel DC analysis of electrical network is given below:
+
+\begin{enumerate}
+\item Partition a large electrical network using the graph partitioner. 
+\item Form multiports from the partitioner output.
+\item Extract {\it Port Connection Diagram} from the partitioned blocks.
+\item Send multiports to each processor.
+\item Compute {\it Port Characteristic} i.e. the matrix $G$ and the vector $b$ in the equation
+$i=Gv+b$,  where $v,i$ are the port voltages and currents, by solving each multiport repeatedly by keeping each one of the port
+voltages to be $1$ and all the others to be zero.
+\item Using the port characteristics as coupled device characteristics of
+the group of ports corresponding to each multiport, write nodal equations for 
+the port connection network 
+and compute the branch voltage of each port edge.
+These latter are the actual voltages of the corresponding ports in the 
+multiports. 
+\item Solve each multiport once more for the port voltages
+computed above. This gives all branch voltages and currents of the original
+network.
+\end{enumerate}
+The way in which port characteristic \cite{GAK,NJB,GT} is extracted, is given below: 
+\subsection{Mathematical model of the port characterization}
+
+In a multiport, port sources can be taken to be either voltage or current sources. In the present method port sources are
+considered as voltage sources and port behavior is of conductance type. Port behavior is given by
+$i=Gv+b$. Port connection diagram may be represented by the reduced incidence matrix 
+$[A_{1} A_{2} ...... A_{k}]$. From port connection diagram, we can write
+
+\begin{equation}
+\left[\begin{array}{llll}
+A_{1} & A_{2} & {\cdots} & A_{k}
+\end{array}\right]
+\left[\begin{array}{l}
+i_{1}\\
+i_{2}\\ 
+{\vdots}\\
+i_{k}\\
+\end{array}\right]
+= 0
+\label{algo1}
+\end{equation}
+
+But we know from the behavior of port sources, $i_{1} = G_{1}v_{1} + b_{1}$, $i_{2} = G_{2}v_{2} +
+b_{2}$ ....etc. $ i_{1},\cdots ,i_{k}  ,  v_{1},\cdots ,v_{k} $ and $ b_{1},\cdots ,b_{k} $ all are 
+vectors and  $ G_{1}, \cdots ,G_{k} $ are the matrices. Thus the equation \ref{algo1} can be modified as
+
+\begin{equation}
+\left[\begin{array}{llll}
+A_{1} & A_{2} & {\cdots} & A_{k}
+\end{array}\right]
+\left[\begin{array}{l}
+G_{1}v_{1} + b_{1}\\
+G_{2}v_{2} + b_{2}\\
+\hspace{.2in}{\vdots}\\
+G_{k}v_{k} + b_{k}\\
+\end{array}\right]
+= 0
+\label{algo2}
+\end{equation}
+or
+\begin{equation}
+\left[\begin{array}{llll}
+A_{1} & A_{2} & {\cdots} & A_{k}
+\end{array}\right]
+\left[\begin{array}{llll}
+G_{1} & 0 & {\cdots} & 0\\ 
+0  & G_{2} & {\cdots} &  0\\ 
+0 & 0 & {\ddots} & 0\\ 
+0 & 0 & {\cdots} & G_{k}\\ 
+\end{array}\right]
+\left[\begin{array}{l}
+v_{1}\\
+v_{2}\\ 
+{\vdots}\\
+v_{k}\\
+\end{array}\right]
+= -
+\left[\begin{array}{llll}  
+A_{1} & A_{2} & {\cdots} & A_{k}
+\end{array}\right]
+\left[\begin{array}{l}
+b_{1}\\
+b_{2}\\
+{\vdots}\\
+b_{k}\\
+\end{array}\right]
+\label{algo3}
+\end{equation}
+
+$v_{1}$, $v_{2}$, $v_{3}$ .... can be represented in terms of $v_{1}=A_{1}^{T}v_{n_{1}}$,
+$v_{2}=A_{2}^{T}v_{n_{2}}$,...., $v_{k}=A_{k}^{T}v_{n_{k}}$. So the equation \ref{algo3} turns 
+out to be:
+
+\begin{equation}
+\left[\begin{array}{llll}
+A_{1} & A_{2} & {\cdots} & A_{k}
+\end{array}\right]
+\left[\begin{array}{llll}
+G_{1} &  0 & {\cdots} & 0\\ 
+0  & G_{2} & {\cdots} & 0\\ 
+0 & 0 & {\ddots} & 0\\ 
+0 & 0 & {\cdots} & G_{k}\\ 
+\end{array}\right]
+\left[\begin{array}{l}
+A_{1}^{T}\\
+A_{2}^{T}\\
+{\vdots}\\
+A_{k}^{T}\\
+\end{array}\right]
+\left[\begin{array}{l}
+v_{n_{1}}\\
+v_{n_{2}}\\
+{\vdots}\\
+v_{n_{k}}\\
+\end{array}\right] = - 
+\left[\begin{array}{llll}  
+A_{1} & A_{2} & {\cdots} & A_{k}
+\end{array}\right]
+\left[\begin{array}{l}
+b_{1}\\
+b_{2}\\
+{\vdots}\\
+b_{k}\\
+\end{array}\right]
+\label{algo4}
+\end{equation}
+
+Here $v_{n_{1}}, v_{n_{2}}, ..., v_{n_{k}}$ are the node voltages of port connection diagram. The coefficient matrix on the left
+side of the equation \ref{algo4} will be called {\it port conductance matrix}.
+Current in each port sources is calculated using DC-Analyzer by setting each port 
+source as a 1-volt source at a time and rest all port sources and internal sources zero in a multiport.
+If the number of port sources in a multiport is $p$, the DC-Analyzer will be called $p+1$ times for
+analysis. Each time it calculates the current vector. The current vector obtained is the same as that of the 
+column of the port conductance matrix corresponding to  the port voltage source set to 1-volt. After $p$ such calculations, submatrix $G_{i}$
+will be obtained. In the same way, $b_{i}$ is obtained by solving multiport on each processor by setting 
+all the port sources zero and all the internal sources live. After calculating $G_{i}$ and $b_{i}$ 
+for $i=1,....n$, node voltages of port connection diagram, can be calculated by LU-Decomposition. 
+LU-Decomposition \cite{Golub,DON} also may be parallelized, if it takes significant time in calculation. 
+After obtaining the node voltages of port connection diagram, the port voltages
+and currents can be computed and thence the node voltages and branch currents of 
+each multiport.
+
+\section{Results}
+
+Parallelization of DC-Analyzer was implemented using the network of PIV 1.6 GHz processors each having 
+256MB RAM. Processors used were connected through a 10/100 Mbps Switch. 
+DC-Analyzer is called $p+1$ times for the $p$-ports in a multiport to compute the currents in port voltage
+sources when it is parallelized. 
+The best case of parallelization is where the speedup obtained approaches the number of processors. This is achieved 
+using {\it Multiport Decomposition} provided the percentage of ports relative to total number of nodes is small 
+(.5$\%$- 1$\%$).\par
+
+The multiport decomposition method was used to solve a number of large DC
+networks through parallelization. In every case the network had a planar grid structure-
+the width and height, in terms of number of nodes, has been specified in the
+results (eg. the network g700k is 5000x140, width being 5000 nodes and 
+height, 140 nodes). 
+For this kind of structure, a partition into 8 blocks, 
+would simply be that obtained by seven equally spaced vertical cuts resulting in 14x139 ports. 
+However, to have a better idea of the performance of our technique
+for a general circuit, the  partitioning was done by a general purpose
+public domain partitioner. We found that the number of ports in the larger
+circuits has come out to be larger than the optimum. This is an area where
+considerable improvement can be made.\par
+An essential precaution in dealing with large circuits is to avoid frequent access of
+the hard disc as this is extremely slow in comparison with operations within the RAM.
+So, as far as possible, we have attempted to bring the required circuit entirely
+within the RAM and perform all the calculations. In the case of g600k and g700k this has 
+not been entirely feasible and one can see that the times for computation increase
+abruptly from g500k to g600k and the latter to g700k.
+
+Note that in the following discussion we mean by parallel processors a distributed cluster of
+weakly coupled processors. 
+We used a master processor for scheduling the individual multiport
+solution tasks to different slave processors. After the port characterization
+was computed by the slaves, this was communicated to the master and the latter
+by itself solved the port connection network.\par
+
+The tables contain the following data:
+A circuit description table gives names of circuits against number of nodes and edges.
+In each circuit voltage and current sources are kept constant at
+$14\%$ and $7\%$ of the circuit size respectively.
+Each subsequent table corresponds to a certain fixed number of slave processors.
+Columns 1,2 are self explanatory. Column 3 gives the input read time. Column 4 is the maximum time 
+a processor took to compute the port characterization of the
+individual multiports (other processors which finished 
+their task earlier would remain idle until this duration is completed).
+Column 5 gives the time taken to compute the final solution
+after port voltages are obtained. 
+Column 6 gives the time taken to solve the port connection   
+network by the master.
+The last column contains the total time taken in the communication
+between master and the slaves.\par
+
+The time during which the master was active can be taken to be
+the communication time + the port connection network solution time.
+Where this can be neglected, it can be seen that the solution time 
+for the entire network is inversely proportional to the number of slave 
+processors. The coefficient matrix for  the port connection network
+would be dense and as the network becomes larger (a few million
+nodes) this part of the computation would begin to dominate in the overall
+computation, unless it is also parallelized. \par
+
+We used $8$ block partitions throughout, independent of the number of 
+slave processors. This is so that in each choice of  
+number of slave processors ($2,4,8$ ) the task of solving the eight multiports is divided
+equally between the slave processors.
+For comparison, we have given the results for a 10 block partition with $2$
+slave processors. It can be seen that the results are not substantially different.
+However, the time for solution of the port connection network is higher
+as is to be expected since when the number of blocks goes up the port connection
+network tends to increase in complexity.
+We note that times given are approximate and rounded to the nearest
+integer. 
+%In each circuit voltage and current sources are kept constant to
+%$14\%$ and $7\%$ of the circuit size respectively.
+%The circuits used have the following structure.
+
+\newpage
+\subsection{Circuits Used}
+\tiny
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{|l|l|l|} 
+\hline
+{\bf Circuit}  & {\bf Nodes } & { \bf Edges }   \\ \hline 
+g60k&  60,000  &  118940 \\ \hline 
+g105k& 105,000 &  208430 \\ \hline 
+g200k& 200,000 &  397420 \\ \hline 
+g300k& 300,000 &  596170 \\ \hline 
+g400k& 400,000 &  795900 \\ \hline 
+g500k& 500,000 &  994900 \\ \hline 
+g600k& 600,000 &  1194880\\ \hline 
+g700k& 700,000 &  1394860\\ \hline 
+\end {tabular}
+\end {center}
+\end {table}
+\normalsize
+
+
+\subsection{Results: 8-block partition}
+Here, $t_{ip}$ is the time for reading the input. $t_{pc}$ is the time taken for port characterization. 
+$t_{mul}$ is the time taken to compute the coefficient matrix of the
+port connection network solution. $t_{pcn}$ is the time taken in port connection diagram solution. 
+$t_{comm}$ is the time taken in communication.
+
+\subsubsection{with one slave processor}
+\tiny
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|l|l|l|} 
+\hline
+{\bf Circuit} & No of & $t_{ip}$ & $t_{pc}$ & $t_{mul}$ &  $t_{pcn}$ & Total Time & $t_{comm}$ \\ 
+              & Blocks& (in sec)& (in sec)  & (in sec)  &  (in sec)  & (in sec)   & (in sec)   \\ \hline 
+g60k&  \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}16& \hspace{0.2in}0& \hspace{0.2in}1& \hspace{0.2in}17& \hspace{0.2in}0     \\ \hline 
+g105k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}35& \hspace{0.2in}0& \hspace{0.2in}1& \hspace{0.2in}36& \hspace{0.2in}1     \\ \hline 
+g200k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}80& \hspace{0.2in}0& \hspace{0.2in}2& \hspace{0.2in}82& \hspace{0.2in}4     \\ \hline 
+g300k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}122& \hspace{0.2in}1& \hspace{0.2in}2& \hspace{0.2in}125& \hspace{0.2in}4   \\ \hline 
+g400k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}217& \hspace{0.2in}1& \hspace{0.2in}4& \hspace{0.2in}222& \hspace{0.2in}7   \\ \hline 
+g500k& \hspace{0.2in}8 & \hspace{0.2in}1 & \hspace{0.2in}272& \hspace{0.2in}1& \hspace{0.2in}8& \hspace{0.2in}282& \hspace{0.2in}7   \\ \hline 
+g600k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}404& \hspace{0.2in}1& \hspace{0.2in}12& \hspace{0.2in}417& \hspace{0.2in}10 \\ \hline 
+g700k& \hspace{0.2in}8 & \hspace{0.2in}1 & \hspace{0.2in}840& \hspace{0.2in}1& \hspace{0.2in}63& \hspace{0.2in}905& \hspace{0.2in}11 \\ \hline 
+\end {tabular}
+\end {center}
+\end {table}
+\normalsize
+\newpage
+\subsubsection{with two slave processors}
+\tiny
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|l|l|l|} 
+\hline
+{\bf Circuit} & No of & $t_{ip}$ & $t_{pc}$ & $t_{mul}$ &  $t_{pcn}$ & Total Time & $t_{comm}$ \\ 
+              & Blocks& (in sec)& (in sec)  & (in sec)  &  (in sec)  & (in sec)   & (in sec)   \\ \hline 
+g60k&  \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in} 9& \hspace{0.2in}0& \hspace{0.2in}1& \hspace{0.2in}10& \hspace{0.2in}0     \\ \hline 
+g105k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}19& \hspace{0.2in}0& \hspace{0.2in}2& \hspace{0.2in}21& \hspace{0.2in}1     \\ \hline 
+g200k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}40& \hspace{0.2in}0& \hspace{0.2in}3& \hspace{0.2in}43& \hspace{0.2in}4     \\ \hline 
+g300k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}62& \hspace{0.2in}0& \hspace{0.2in}2& \hspace{0.2in}64& \hspace{0.2in}4   \\ \hline 
+g400k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}121& \hspace{0.2in}1& \hspace{0.2in}4& \hspace{0.2in}126& \hspace{0.2in}7   \\ \hline 
+g500k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}137& \hspace{0.2in}1& \hspace{0.2in}7& \hspace{0.2in}145& \hspace{0.2in}7   \\ \hline 
+g600k& \hspace{0.2in}8 & \hspace{0.2in}1 & \hspace{0.2in}223& \hspace{0.2in}1& \hspace{0.2in}12& \hspace{0.2in}237& \hspace{0.2in}10 \\ \hline 
+g700k& \hspace{0.2in}8 & \hspace{0.2in}1 & \hspace{0.2in}437& \hspace{0.2in}1& \hspace{0.2in}65& \hspace{0.2in}504& \hspace{0.2in}11 \\ \hline 
+\end {tabular}
+\end {center}
+\end {table}
+\normalsize
+
+\subsubsection{with four slave processors}
+\tiny
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|l|l|l|} 
+\hline
+{\bf Circuit} & No of & $t_{ip}$ & $t_{pc}$ & $t_{mul}$ &  $t_{pcn}$ & Total Time & $t_{comm}$ \\ 
+              & Blocks& (in sec)& (in sec)  & (in sec)  &  (in sec)  & (in sec)   & (in sec)   \\ \hline 
+g60k&  \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in} 5& \hspace{0.2in}0& \hspace{0.2in}1& \hspace{0.2in} 6& \hspace{0.2in}0     \\ \hline 
+g105k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}10& \hspace{0.2in}0& \hspace{0.2in}1& \hspace{0.2in}11& \hspace{0.2in}1     \\ \hline 
+g200k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}22& \hspace{0.2in}1& \hspace{0.2in}2& \hspace{0.2in}25& \hspace{0.2in}4     \\ \hline 
+g300k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}34& \hspace{0.2in}0& \hspace{0.2in}2& \hspace{0.2in}36& \hspace{0.2in}4   \\ \hline 
+g400k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}61& \hspace{0.2in}1& \hspace{0.2in}3& \hspace{0.2in}66& \hspace{0.2in}7   \\ \hline 
+g500k& \hspace{0.2in}8 & \hspace{0.2in}1 & \hspace{0.2in}77& \hspace{0.2in}1& \hspace{0.2in}7& \hspace{0.2in}85& \hspace{0.2in}7   \\ \hline 
+g600k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}115& \hspace{0.2in}1& \hspace{0.2in}13& \hspace{0.2in}129& \hspace{0.2in}10 \\ \hline 
+g700k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}254& \hspace{0.2in}2& \hspace{0.2in}63& \hspace{0.2in}319& \hspace{0.2in}11 \\ \hline 
+\end {tabular}
+\end {center}
+\end {table}
+\normalsize
+\newpage
+
+\subsubsection{with eight slave processors}
+\tiny
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|l|l|l|} 
+\hline
+{\bf Circuit} & No of & $t_{ip}$ & $t_{pc}$ & $t_{mul}$ &  $t_{pcn}$ & Total Time & $t_{comm}$ \\ 
+              & Blocks& (in sec)& (in sec)  & (in sec)  &  (in sec)  & (in sec)   & (in sec)   \\ \hline 
+g60k&  \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in} 3& \hspace{0.2in}0& \hspace{0.2in}1& \hspace{0.2in} 4& \hspace{0.2in}0     \\ \hline 
+g105k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in} 5& \hspace{0.2in}0& \hspace{0.2in}2& \hspace{0.2in} 7& \hspace{0.2in}1     \\ \hline 
+g200k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}12& \hspace{0.2in}0& \hspace{0.2in}2& \hspace{0.2in}14& \hspace{0.2in}4     \\ \hline 
+g300k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}19& \hspace{0.2in}0& \hspace{0.2in}2& \hspace{0.2in}21& \hspace{0.2in}4   \\ \hline 
+g400k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}33& \hspace{0.2in}1& \hspace{0.2in}4& \hspace{0.2in}38& \hspace{0.2in}7   \\ \hline 
+g500k& \hspace{0.2in}8 & \hspace{0.2in}1 & \hspace{0.2in}41& \hspace{0.2in}1& \hspace{0.2in}7& \hspace{0.2in}49& \hspace{0.2in}7   \\ \hline 
+g600k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}64& \hspace{0.2in}1& \hspace{0.2in}11&\hspace{0.2in}76& \hspace{0.2in}10 \\ \hline 
+g700k& \hspace{0.2in}8 & \hspace{0.2in}0 & \hspace{0.2in}156& \hspace{0.2in}1& \hspace{0.2in}63&\hspace{0.2in}220& \hspace{0.2in}11 \\ \hline 
+\end {tabular}
+\end {center}
+\end {table}
+\normalsize
+
+
+\subsection{Results: 10-block partition}
+
+\subsubsection{with two slave processors}
+\tiny
+\begin{table}[ht]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|l|l|l|} 
+\hline
+{\bf Circuit} & No of & $t_{ip}$ & $t_{pc}$ & $t_{mul}$ &  $t_{pcn}$ & Total Time & $t_{comm}$ \\ 
+              & Blocks& (in sec)& (in sec)  & (in sec)  &  (in sec)  & (in sec)   & (in sec)   \\ \hline 
+g60k&  \hspace{0.2in}10& \hspace{0.2in}0 & \hspace{0.2in} 9  & \hspace{0.2in}0 & \hspace{0.2in}2& \hspace{0.2in}11& \hspace{0.2in}   0 \\ \hline 
+g105k& \hspace{0.2in}10& \hspace{0.2in}0 & \hspace{0.2in}19  & \hspace{0.2in}0 & \hspace{0.2in}4& \hspace{0.2in}23& \hspace{0.2in}   1 \\ \hline 
+g200k& \hspace{0.2in}10& \hspace{0.2in}0 & \hspace{0.2in}44  & \hspace{0.2in}1 & \hspace{0.2in}7& \hspace{0.2in}52& \hspace{0.2in}   4 \\ \hline 
+g300k& \hspace{0.2in}10& \hspace{0.2in}0 & \hspace{0.2in}64  & \hspace{0.2in}1 & \hspace{0.2in}19& \hspace{0.2in}84& \hspace{0.2in}   6 \\ \hline 
+g400k& \hspace{0.2in}10& \hspace{0.2in}0 & \hspace{0.2in}109 & \hspace{0.2in}1 & \hspace{0.2in}21& \hspace{0.2in}131& \hspace{0.2in} 7 \\ \hline 
+g500k& \hspace{0.2in}10& \hspace{0.2in}0 & \hspace{0.2in}140 & \hspace{0.2in}1 & \hspace{0.2in}37& \hspace{0.2in}178& \hspace{0.2in} 9 \\ \hline 
+g600k& \hspace{0.2in}10& \hspace{0.2in}0 & \hspace{0.2in}199 & \hspace{0.2in}1 & \hspace{0.2in}81& \hspace{0.2in}281& \hspace{0.2in} 10\\ \hline 
+g700k& \hspace{0.2in}10& \hspace{0.2in}0 & \hspace{0.2in}299 & \hspace{0.2in}2 & \hspace{0.2in}189& \hspace{0.2in}490& \hspace{0.2in}11\\ \hline 
+\end {tabular}
+\end {center}
+\end {table}
+\normalsize
+%\newpage
+
+
+\section{Conclusion}
+In this paper a method of parallelization of circuit simulation
+is outlined which is based on the structure (topology) of the network
+viz. {\it Multiport Decomposition}.
+We use this method to parallelize the DC-Analyzer noting that 
+since a DC-Analyzer lies at the core of every general purpose simulator, this would amount
+to parallelizing the circuit simulator.
+Our results show speedups proportional to the number of processors
+provided the blocks into which the network is broken up do
+not have many ports in between (number of ports $< 1\%$).
+We find it interesting that a method which uses no 
+sparsity exploiting technique except the simple structural one 
+of multiport decomposition does as well as can be hoped for with the best 
+kind of parallelization. We note that circuits of sizes up to $700,000$ nodes
+and $1.4$ million edges have been solved by this technique in a few minutes using
+facilities easy to obtain in any computational laboratory or
+software house.
+
+
+\begin{thebibliography}{}
+
+\addcontentsline{toc}{chapter}{References}  
+\bibitem[1]{HN} H. Narayanan, "Submodular Function and Electrical
+Networks, Annals of Discrete Mathematics", Volume 54, North Holland, Amsterdam, The Netherlands, 1997.
+\bibitem[2]{Golub} G. Golub, C. Van Loan, "Matrix Computations - 2nd Edition", Johns Hopkins University Press Baltimore,
+ Maryland, 1989.
+\bibitem[3]{DON} J. Dongara, L. Duff, D. Sorensen and H. Van der Vorst
+"Numerical Linear Algebra for High-Performance Computers", Society of Industrial and Applied Mathematics, Philadelphia, 1998.
+\bibitem[4]{PVM}PVM 3 User Guide and Reference Manual, "Al Gist et. al.",
+Oak Ridge National Laboratory, Engineering Physics and Mathematics
+Division, Mathematical Science Section, Oak Ridge, Tennessee, 378331, USA
+September 1991, operated by Martin Marietta Energy Systems.
+\bibitem[5]{PVMS}PVM's HTTP Site, "http://www.epm.ornl.gov/pvm/"
+\bibitem[6]{SIE} Norbert Frohlich, Bernhard M. Riess, Utz A. wever, and 
+Qinghau Zheng "A New Approach for Parallel Simulation of VLSI circuits on a 
+Transistor level." in {\it IEEE Transaction on Circuits and system -1:
+Fundamental Theory and Applications. Vol. 45, No. 6}, 1998, page 601-613.
+\bibitem[7]{GAK} G. Anil Kumar, "Parallelization of Circuit Simulator",M.Tech. Dissertation Report,
+Department of Electrical Engineering, Indian Institute of Technology, Bombay, Jan 2002
+\bibitem[8]{NJB}Nilesh J. Bhattad,"Parallelization of Circuit Simulator", M.Tech. Dissertation,
+Department of Electrical Engineering, Indian Institute of Technology, Bombay, Jan 2001, 
+\bibitem[9]{GT}Gaurav Trivedi,"Parallelization of Circuit Simulator", M.Tech. Dissertation,
+Department of Electrical Engineering, Indian Institute of Technology, Bombay, Jan 2000, 
+\bibitem[10]{SHBP} S. H. Batterywala and H. Narayanan,"Efficient DC Analysis of RVJ Circuits for Moment and Derivative
+Commutations of Interconnect Networks", 12th International Conference on VLSI Design,1999,169-174.
+
+
+\end{thebibliography}   
+
+\end{document}
