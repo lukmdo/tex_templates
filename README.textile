@@ -1,4 +1,4 @@
-h1. Why
+h1. Why "!http://stillmaintained.com/ssspiochld/tex_templates.png!":status
 
 LaTeX just as any other tool should allow for fluent idea-flow.
 When the user becomes interrupted by its semantics, complexity or ...
